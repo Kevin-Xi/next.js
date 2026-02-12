@@ -474,6 +474,7 @@ export interface NapiIssueSourceRange {
 }
 export interface NapiSource {
   ident: string
+  filePath: string
   content?: string
 }
 export interface NapiSourcePos {
