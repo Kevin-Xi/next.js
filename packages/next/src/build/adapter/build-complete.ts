@@ -236,6 +236,11 @@ export interface AdapterOutput {
        * renderingMode signals PPR or not for a prerender
        */
       renderingMode?: RenderingMode
+      /**
+       * partialFallback signals this prerender serves a partial fallback shell
+       * and should be upgraded to a full route in the background.
+       */
+      partialFallback?: boolean
 
       /**
        * bypassToken is the generated token that signals a prerender cache
@@ -1167,6 +1172,7 @@ export async function handleBuildComplete({
               config: {
                 ...initialOutput.config,
                 bypassFor: undefined,
+                partialFallback: undefined,
               },
 
               fallback: {
@@ -1543,6 +1549,11 @@ export async function handleBuildComplete({
             (item) => item.page === dynamicRoute
           )?.routeKeys || {}
         )
+        const partialFallback =
+          isAppPage &&
+          renderingMode === RenderingMode.PARTIALLY_STATIC &&
+          typeof fallback === 'string' &&
+          Boolean(meta.postponed)
         let htmlAllowQuery = allowQuery
 
         // We only want to vary on the shell contents if there is a fallback
@@ -1557,7 +1568,10 @@ export async function handleBuildComplete({
           // non-empty, and it would be valuable to also generate an empty
           // RSC shell.
           else if (meta.postponed) {
-            htmlAllowQuery = []
+            htmlAllowQuery =
+              partialFallback && routesManifest.rsc.clientParamParsing
+                ? allowQuery
+                : []
           }
         }
 
@@ -1602,6 +1616,7 @@ export async function handleBuildComplete({
             allowQuery: htmlAllowQuery,
             allowHeader,
             renderingMode,
+            partialFallback: partialFallback || undefined,
             bypassFor: isAppPage ? experimentalBypassFor : undefined,
             bypassToken: prerenderManifest.preview.previewModeId,
           },
@@ -1679,6 +1694,7 @@ export async function handleBuildComplete({
               config: {
                 ...initialOutput.config,
                 allowQuery: dataAllowQuery,
+                partialFallback: undefined,
               },
             })
           } else if (dataRoute) {
@@ -1687,6 +1703,10 @@ export async function handleBuildComplete({
               id: dataRoute,
               pathname: dataRoute,
               fallback: undefined,
+              config: {
+                ...initialOutput.config,
+                partialFallback: undefined,
+              },
             })
           }
           prerenderGroupId += 1
@@ -1745,6 +1765,10 @@ export async function handleBuildComplete({
                 pathname: dataPathname,
                 // data route doesn't have skeleton fallback
                 fallback: undefined,
+                config: {
+                  ...initialOutput.config,
+                  partialFallback: undefined,
+                },
                 groupId: prerenderGroupId,
               })
             }
