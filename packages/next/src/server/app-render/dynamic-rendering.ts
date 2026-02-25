@@ -628,7 +628,7 @@ export function useDynamicRouteParams(expression: string) {
           `\`${expression}\` was called inside a cache scope. Next.js should be preventing ${expression} from being included in server components statically, but did not in this case.`
         )
       case 'validation-client':
-        // TODO(instant-validation): in build, this depends on samples
+        // TODO(instant-validation-build): in build, this depends on samples
         break
       case 'prerender-legacy':
       case 'request':
@@ -655,7 +655,7 @@ export function useDynamicSearchParams(expression: string) {
 
   switch (workUnitStore.type) {
     case 'validation-client':
-      // TODO(instant-validation): in build, this depends on samples
+      // TODO(instant-validation-build): in build, this depends on samples
       return
     case 'prerender-client': {
       React.use(

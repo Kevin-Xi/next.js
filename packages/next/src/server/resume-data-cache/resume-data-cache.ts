@@ -156,6 +156,17 @@ export function createPrerenderResumeDataCache(): PrerenderResumeDataCache {
   }
 }
 
+export function clonePrerenderResumeDataCache(
+  source: PrerenderResumeDataCache
+): PrerenderResumeDataCache {
+  return {
+    cache: new Map(source.cache),
+    fetch: new Map(source.fetch),
+    encryptedBoundArgs: new Map(source.encryptedBoundArgs),
+    decryptedBoundArgs: new Map(source.decryptedBoundArgs),
+  }
+}
+
 /**
  * Creates an immutable render resume data cache from either:
  * 1. An existing prerender cache instance
