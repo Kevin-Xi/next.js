@@ -2763,6 +2763,52 @@ export function writeStaticStageResponseIntoCache(
 }
 
 /**
+ * Decodes an embedded runtime prefetch Flight stream and computes derived
+ * values (stale time, vary params, completeness). Callers should `.then()`
+ * the result into `writeDynamicRenderResponseIntoCache`.
+ */
+export async function processRuntimePrefetchStream(
+  now: number,
+  runtimePrefetchStream: ReadableStream<Uint8Array>
+): Promise<{
+  flightData: FlightData
+  buildId: string | undefined
+  isResponsePartial: boolean
+  headVaryParams: VaryParams | null
+  staleAt: number
+}> {
+  const { stream, completenessMarker } = await stripCompletenessMarker(
+    runtimePrefetchStream
+  )
+
+  const serverData =
+    await createFromNextReadableStream<NavigationFlightResponse>(
+      stream,
+      undefined,
+      { allowPartialStream: true }
+    )
+
+  const headVaryParamsThenable = serverData.h
+  const headVaryParams =
+    headVaryParamsThenable !== null
+      ? readVaryParams(headVaryParamsThenable)
+      : null
+
+  const staleAt = await getStaleAt(now, serverData.s)
+
+  const isResponsePartial =
+    completenessMarker === ResponseCompletenessMarker.Partial
+
+  return {
+    flightData: serverData.f,
+    buildId: serverData.b,
+    isResponsePartial,
+    headVaryParams,
+    staleAt,
+  }
+}
+
+/**
  * Writes flight data from the initial HTML into the segment cache as complete
  * entries. Used for fully static pages where all segments are present and no
  * dynamic follow-up is needed.

@@ -37,8 +37,11 @@ import {
   invalidateRouteCacheEntries,
   getStaleAt,
   writeStaticStageResponseIntoCache,
+  processRuntimePrefetchStream,
+  writeDynamicRenderResponseIntoCache,
   EntryStatus,
 } from '../segment-cache/cache'
+import { FetchStrategy } from '../segment-cache/types'
 import { discoverKnownRoute } from '../segment-cache/optimistic-routes'
 import { NEXT_NAV_DEPLOYMENT_ID_HEADER } from '../../../lib/constants'
 import type { NormalizedSearch } from '../segment-cache/cache-key'
@@ -1608,6 +1611,8 @@ async function fetchMissingDynamicData(
       await waitForNavigationLock()
     }
 
+    const now = Date.now()
+
     if (routeCacheEntry !== null && result.staticStageData !== null) {
       const { response: staticStageResponse, isFullyStatic } =
         result.staticStageData
@@ -1615,8 +1620,6 @@ async function fetchMissingDynamicData(
       // Update the route entry so future navigations to this route can skip the
       // dynamic follow-up when reading from the segment cache.
       routeCacheEntry.isFullyStatic = isFullyStatic
-
-      const now = Date.now()
 
       getStaleAt(now, staticStageResponse.s)
         .then((staleAt) => {
@@ -1636,6 +1639,27 @@ async function fetchMissingDynamicData(
         .catch(() => {
           // The static stage processing failed. Not fatal — the navigation
           // completed normally, we just won't write into the cache.
+        })
+    }
+
+    if (routeCacheEntry !== null && result.runtimePrefetchStream !== null) {
+      processRuntimePrefetchStream(now, result.runtimePrefetchStream)
+        .then((processed) =>
+          writeDynamicRenderResponseIntoCache(
+            now,
+            FetchStrategy.PPRRuntime,
+            processed.flightData,
+            processed.buildId,
+            processed.isResponsePartial,
+            processed.headVaryParams,
+            processed.staleAt,
+            routeCacheEntry,
+            null
+          )
+        )
+        .catch(() => {
+          // The runtime prefetch cache write failed. Not fatal — the
+          // navigation completed normally, we just won't cache runtime data.
         })
     }
 
