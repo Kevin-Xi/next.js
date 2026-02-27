@@ -209,6 +209,7 @@ export class TurbopackManifestLoader {
   /// interceptionRewrites that have been written to disk
   /// This is used to avoid unnecessary writes if the rewrites haven't changed
   private cachedInterceptionRewrites: string | undefined = undefined
+  private pendingCacheDeletes: string[] = []
 
   private readonly distDir: string
   private readonly buildId: string
@@ -318,8 +319,8 @@ export class TurbopackManifestLoader {
       `${SERVER_REFERENCE_MANIFEST}.js`
     )
     const json = JSON.stringify(actionManifest, null, 2)
-    deleteCache(actionManifestJsonPath)
-    deleteCache(actionManifestJsPath)
+    this.pendingCacheDeletes.push(actionManifestJsonPath)
+    this.pendingCacheDeletes.push(actionManifestJsPath)
     writeFileAtomic(actionManifestJsonPath, json)
     writeFileAtomic(
       actionManifestJsPath,
@@ -351,7 +352,7 @@ export class TurbopackManifestLoader {
       'server',
       APP_PATHS_MANIFEST
     )
-    deleteCache(appPathsManifestPath)
+    this.pendingCacheDeletes.push(appPathsManifestPath)
     writeFileAtomic(
       appPathsManifestPath,
       JSON.stringify(appPathsManifest, null, 2)
@@ -364,7 +365,7 @@ export class TurbopackManifestLoader {
     }
     const webpackStats = this.mergeWebpackStats(this.webpackStats.values())
     const path = join(this.distDir, 'server', WEBPACK_STATS)
-    deleteCache(path)
+    this.pendingCacheDeletes.push(path)
     writeFileAtomic(path, JSON.stringify(webpackStats, null, 2))
   }
 
@@ -383,8 +384,8 @@ export class TurbopackManifestLoader {
       'server',
       `${SUBRESOURCE_INTEGRITY_MANIFEST}.js`
     )
-    deleteCache(pathJson)
-    deleteCache(pathJs)
+    this.pendingCacheDeletes.push(pathJson)
+    this.pendingCacheDeletes.push(pathJs)
     writeFileAtomic(pathJson, JSON.stringify(sriManifest, null, 2))
     writeFileAtomic(
       pathJs,
@@ -560,7 +561,7 @@ export class TurbopackManifestLoader {
       'server',
       `${INTERCEPTION_ROUTE_REWRITE_MANIFEST}.js`
     )
-    deleteCache(interceptionRewriteManifestPath)
+    this.pendingCacheDeletes.push(interceptionRewriteManifestPath)
 
     writeFileAtomic(
       interceptionRewriteManifestPath,
@@ -586,8 +587,8 @@ export class TurbopackManifestLoader {
       `${MIDDLEWARE_BUILD_MANIFEST}.js`
     )
 
-    deleteCache(buildManifestPath)
-    deleteCache(middlewareBuildManifestPath)
+    this.pendingCacheDeletes.push(buildManifestPath)
+    this.pendingCacheDeletes.push(middlewareBuildManifestPath)
     writeFileAtomic(buildManifestPath, JSON.stringify(buildManifest, null, 2))
     writeFileAtomic(
       middlewareBuildManifestPath,
@@ -606,7 +607,7 @@ export class TurbopackManifestLoader {
       this.distDir,
       `fallback-${BUILD_MANIFEST}`
     )
-    deleteCache(fallbackBuildManifestPath)
+    this.pendingCacheDeletes.push(fallbackBuildManifestPath)
     writeFileAtomic(
       fallbackBuildManifestPath,
       JSON.stringify(fallbackBuildManifest, null, 2)
@@ -727,8 +728,8 @@ export class TurbopackManifestLoader {
       'server',
       `${NEXT_FONT_MANIFEST}.js`
     )
-    deleteCache(fontManifestJsonPath)
-    deleteCache(fontManifestJsPath)
+    this.pendingCacheDeletes.push(fontManifestJsonPath)
+    this.pendingCacheDeletes.push(fontManifestJsPath)
     writeFileAtomic(fontManifestJsonPath, json)
     writeFileAtomic(
       fontManifestJsPath,
@@ -872,7 +873,7 @@ export class TurbopackManifestLoader {
       'server',
       MIDDLEWARE_MANIFEST
     )
-    deleteCache(middlewareManifestPath)
+    this.pendingCacheDeletes.push(middlewareManifestPath)
     writeFileAtomic(
       middlewareManifestPath,
       JSON.stringify(middlewareManifest, null, 2)
@@ -888,7 +889,7 @@ export class TurbopackManifestLoader {
       2
     )};self.__MIDDLEWARE_MATCHERS_CB && self.__MIDDLEWARE_MATCHERS_CB()`
 
-    deleteCache(clientMiddlewareManifestPath)
+    this.pendingCacheDeletes.push(clientMiddlewareManifestPath)
     writeFileAtomic(
       join(this.distDir, clientMiddlewareManifestPath),
       clientMiddlewareManifestJs
@@ -928,7 +929,7 @@ export class TurbopackManifestLoader {
     }
     const pagesManifest = this.mergePagesManifests(this.pagesManifests.values())
     const pagesManifestPath = join(this.distDir, 'server', PAGES_MANIFEST)
-    deleteCache(pagesManifestPath)
+    this.pendingCacheDeletes.push(pagesManifestPath)
     writeFileAtomic(pagesManifestPath, JSON.stringify(pagesManifest, null, 2))
   }
 
@@ -958,6 +959,12 @@ export class TurbopackManifestLoader {
 
     if (process.env.TURBOPACK_STATS != null) {
       this.writeWebpackStats()
+    }
+
+    // Flush all queued cache deletions in a single require.cache scan
+    if (this.pendingCacheDeletes.length > 0) {
+      deleteCache(this.pendingCacheDeletes)
+      this.pendingCacheDeletes = []
     }
   }
 }

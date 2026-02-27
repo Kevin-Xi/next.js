@@ -592,6 +592,7 @@ export async function createHotReloaderTurbopack(
     // use the edge runtime, and App Router edge routes all don't support server HMR.
     const usesServerHmr = entryType === 'app' && writtenEndpoint.type !== 'edge'
 
+    const filesToDelete: string[] = []
     for (const file of serverPaths) {
       const relativePath = relative(distDir, file)
 
@@ -603,11 +604,12 @@ export async function createHotReloaderTurbopack(
       }
 
       clearModuleContext(file)
-      // For Pages Router, edge routes, middleware, and manifest files
-      // (e.g., *_client-reference-manifest.js): clear the sharedCache in
-      // evalManifest(), Node.js require.cache, and edge runtime module contexts.
-      deleteCache(file)
+      filesToDelete.push(file)
     }
+    // For Pages Router, edge routes, middleware, and manifest files
+    // (e.g., *_client-reference-manifest.js): clear the sharedCache in
+    // evalManifest(), Node.js require.cache, and edge runtime module contexts.
+    deleteCache(filesToDelete)
 
     // Clear Turbopack's chunk-loading cache so chunks are re-required from disk on
     // the next request.
