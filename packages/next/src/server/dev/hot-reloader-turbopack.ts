@@ -412,6 +412,7 @@ export async function createHotReloaderTurbopack(
         opts.nextConfig
       ),
       nextVersion: process.env.__NEXT_VERSION as string,
+      serverHmr: experimentalServerFastRefresh,
     },
     {
       memoryLimit: opts.nextConfig.experimental?.turbopackMemoryLimit,
