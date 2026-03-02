@@ -159,10 +159,12 @@ where
         match self {
             Either::Left(this) => {
                 let tx = tx.map(|tx| read_transaction_left_or_panic(tx.as_ref()));
+                // Safety: `tx` is unwrapped from `Either::Left`, so it originated from `this`.
                 unsafe { this.forward_lookup_task_cache(tx, key) }
             }
             Either::Right(this) => {
                 let tx = tx.map(|tx| read_transaction_right_or_panic(tx.as_ref()));
+                // Safety: `tx` is unwrapped from `Either::Right`, so it originated from `this`.
                 unsafe { this.forward_lookup_task_cache(tx, key) }
             }
         }
@@ -178,10 +180,12 @@ where
         match self {
             Either::Left(this) => {
                 let tx = tx.map(|tx| read_transaction_left_or_panic(tx.as_ref()));
+                // Safety: `tx` is unwrapped from `Either::Left`, so it originated from `this`.
                 unsafe { this.lookup_data(tx, task_id, category, storage) }
             }
             Either::Right(this) => {
                 let tx = tx.map(|tx| read_transaction_right_or_panic(tx.as_ref()));
+                // Safety: `tx` is unwrapped from `Either::Right`, so it originated from `this`.
                 unsafe { this.lookup_data(tx, task_id, category, storage) }
             }
         }
@@ -196,10 +200,12 @@ where
         match self {
             Either::Left(this) => {
                 let tx = tx.map(|tx| read_transaction_left_or_panic(tx.as_ref()));
+                // Safety: `tx` is unwrapped from `Either::Left`, so it originated from `this`.
                 unsafe { this.batch_lookup_data(tx, task_ids, category) }
             }
             Either::Right(this) => {
                 let tx = tx.map(|tx| read_transaction_right_or_panic(tx.as_ref()));
+                // Safety: `tx` is unwrapped from `Either::Right`, so it originated from `this`.
                 unsafe { this.batch_lookup_data(tx, task_ids, category) }
             }
         }
