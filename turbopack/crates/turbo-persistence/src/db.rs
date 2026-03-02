@@ -378,7 +378,15 @@ impl<S: ParallelScheduler, const FAMILIES: usize> TurboPersistence<S, FAMILIES> 
     #[tracing::instrument(level = "info", name = "reading database blob", skip_all)]
     fn read_blob(&self, seq: u32) -> Result<ArcBytes> {
         let path = self.path.join(format!("{seq:08}.blob"));
-        let mmap = unsafe { Mmap::map(&File::open(&path)?)? };
+        let file = File::open(&path)
+            .with_context(|| format!("Failed to open blob file {}", path.display()))?;
+        let mmap = unsafe { Mmap::map(&file) }.with_context(|| {
+            format!(
+                "Failed to mmap blob file {} ({} bytes)",
+                path.display(),
+                file.metadata().map(|m| m.len()).unwrap_or(0)
+            )
+        })?;
         #[cfg(unix)]
         mmap.advise(memmap2::Advice::Sequential)?;
         #[cfg(unix)]
@@ -388,7 +396,9 @@ impl<S: ParallelScheduler, const FAMILIES: usize> TurboPersistence<S, FAMILIES> 
         #[cfg(target_os = "linux")]
         mmap.advise(memmap2::Advice::Unmergeable)?;
         let mut compressed = &mmap[..];
-        let uncompressed_length = compressed.read_u32::<BE>()?;
+        let uncompressed_length = compressed
+            .read_u32::<BE>()
+            .context("Failed to read uncompressed length from blob file")?;
 
         let buffer = decompress_into_arc(uncompressed_length, compressed)?;
         Ok(ArcBytes::from(buffer))
